@@ -2,7 +2,6 @@ import React, { useEffect, useState } from "react";
 import {
   SafeAreaView,
   View,
-  Image,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -10,8 +9,8 @@ import {
   ActivityIndicator,
   Alert,
 } from "react-native";
-import ModalTerminosCondiciones from "@/components/modalPoliticas"; // Asegúrate de que la ruta sea correcta
 
+import { Link, useRouter } from "expo-router";
 import Icon from "react-native-vector-icons/FontAwesome5";
 import { library } from "@fortawesome/fontawesome-svg-core";
 import {
@@ -23,8 +22,12 @@ import {
   faGavel,
   faUserTimes,
 } from "@fortawesome/free-solid-svg-icons";
+
+import { auth, ikam } from "@/firebase/config-ikam";
 import { getUserData, clearUserData } from "@/auth/authService";
-import { Link, useRouter } from "expo-router";
+import { listenToUserChanges } from "@/services/services";
+import ModalTerminosCondiciones from "@/components/modalPoliticas";
+
 import {
   doc,
   deleteDoc,
@@ -32,11 +35,9 @@ import {
   query,
   where,
   getDocs,
-  getDoc,
 } from "firebase/firestore";
-import { auth, ikam } from "@/firebase/config-ikam";
 import { deleteUser } from "firebase/auth";
-import { listenToUserChanges } from "@/services/services";
+
 import { User } from "@/models/User";
 import colorsIkam from "@/assets/estilos";
 
@@ -195,9 +196,11 @@ export default function App() {
         <View style={styles.contenedorPerfilColumnas}>
           {/* <Icon name="user-circle" size={70} color="black" solid /> */}
           <View style={styles.circle}>
-            <Text style={styles.text}>{userData.display_name.toUpperCase()[0] +
+            <Text style={styles.text}>
+              {userData.display_name.toUpperCase()[0] +
                 "" +
-                userData.last_name.toUpperCase()[0]}</Text>
+                userData.last_name.toUpperCase()[0]}
+            </Text>
           </View>
           <View style={styles.textoPerfilContainer}>
             <Text style={styles.textoPerfil}>
@@ -211,23 +214,29 @@ export default function App() {
       </View>
       <ScrollView style={styles.contenedorOpciones}>
         <Link asChild href={"/configuracion/perfil"}>
-          <RenderOption icon="user" text="Datos de la cuenta" onPress={null} />
+          <RenderOption
+            icon="user"
+            text="Datos de la cuenta"
+            onPress={() => {}}
+          />
         </Link>
         <Link asChild href={"/configuracion/preguntas"}>
           <RenderOption
             icon="question"
             text="Preguntas Frecuentes"
-            onPress={null}
+            onPress={() => {}}
           />
         </Link>
         <Link asChild href={"/configuracion/contacto"}>
           <RenderOption
             icon="id-card-alt"
-            text="Contacto Ikam Multitiendas"
-            onPress={null}
+            text="Contacto IKAM Multitiendas"
+            onPress={() => {}}
           />
         </Link>
-        <Text style={styles.textoSubTitulo}>Politica de ikam Multitiendas</Text>
+        <Text style={styles.textoSubTitulo}>
+          Políticas de IKAM Multitiendas
+        </Text>
         {/* <RenderOption
           icon="lock"
           text="Aviso de privacidad"
@@ -235,7 +244,7 @@ export default function App() {
         /> */}
         <RenderOption
           icon="file-alt"
-          text="Aviso de privacidad, Terminos y Condiciones"
+          text="Aviso de privacidad, Términos y Condiciones de IKAM Multitiendas"
           onPress={() => setModalVisible(true)}
         />
         {/* <Text style={styles.textoSubTitulo}>
@@ -263,13 +272,16 @@ export default function App() {
   );
 }
 
-const RenderOption = ({ icon, text, onPress }) => (
-  <TouchableOpacity style={styles.elementoOpcion} onPress={onPress}>
+const RenderOption = React.forwardRef<
+  View,
+  { icon: string; text: string; onPress: () => void }
+>(({ icon, text, onPress }, ref) => (
+  <TouchableOpacity style={styles.elementoOpcion} onPress={onPress} ref={ref}>
     <Icon name={icon} size={24} color="#888" solid />
     <Text style={styles.textoOpcion}>{text}</Text>
     <Text style={styles.flecha}>›</Text>
   </TouchableOpacity>
-);
+));
 
 const styles = StyleSheet.create({
   safeArea: {
@@ -302,13 +314,13 @@ const styles = StyleSheet.create({
     height: 70,
     borderRadius: 35,
     backgroundColor: colorsIkam.azul.backgroundColor,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
   },
   text: {
-    color: 'white',
+    color: "white",
     fontSize: 24,
-    fontWeight: 'bold',
+    fontWeight: "bold",
   },
   textoPerfilContainer: {
     marginLeft: 20,

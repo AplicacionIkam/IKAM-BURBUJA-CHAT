@@ -13,7 +13,7 @@ const BarraBusquedaCategoria = ({
   colonia,
   setColonia,
   colonias,
-  setColonias
+  setColonias,
 }) => {
   const [open, setOpen] = useState(false);
 
@@ -58,7 +58,7 @@ const styles = StyleSheet.create({
     width: viewportWidth * 0.9,
     alignSelf: "center",
     marginVertical: 10,
-    zIndex:1001
+    zIndex: 1001,
   },
   dropDownPicker: {
     marginBottom: 15,
@@ -81,8 +81,6 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.2,
     shadowRadius: 2,
     elevation: 3,
-    
-    
   },
   barraBusqueda: {
     flexDirection: "row",
@@ -106,28 +104,27 @@ const styles = StyleSheet.create({
 
 export default BarraBusquedaCategoria;
 
-  // const [colonias, setColonias] = useState([
-  //   { label: "Todas las colonias", value: "" },
-  // ]);
+// const [colonias, setColonias] = useState([
+//   { label: "Todas las colonias", value: "" },
+// ]);
 
-  // useEffect(() => {
-  //   const obtenerAtributosColeccion = async () => {
-  //     try {
-  //       console.log("de nuevo")
-  //       const querySnapshot = await getDocs(collection(ikam, "colonia"));
-  //       const coloniasArray = querySnapshot.docs.map((doc) => ({
-  //         id: `${doc.id}-${doc.data().nombreCol}`, // Genera una clave única combinada
-  //         label: doc.data().nombreCol,
-  //         value: doc.data().nombreCol,
-  //       }));
-  //       setColonias((prevColonias) => [...prevColonias, ...coloniasArray]);
-  //     } catch (error) {
-  //       console.error(
-  //         "Error obteniendo los atributos de la colección 'colonia':",
-  //         error
-  //       );
-  //     }
-  //   };
-  //   obtenerAtributosColeccion();
-  // }, []);
-
+// useEffect(() => {
+//   const obtenerAtributosColeccion = async () => {
+//     try {
+//       console.log("de nuevo")
+//       const querySnapshot = await getDocs(collection(ikam, "colonia"));
+//       const coloniasArray = querySnapshot.docs.map((doc) => ({
+//         id: `${doc.id}-${doc.data().nombreCol}`, // Genera una clave única combinada
+//         label: doc.data().nombreCol,
+//         value: doc.data().nombreCol,
+//       }));
+//       setColonias((prevColonias) => [...prevColonias, ...coloniasArray]);
+//     } catch (error) {
+//       console.error(
+//         "Error obteniendo los atributos de la colección 'colonia':",
+//         error
+//       );
+//     }
+//   };
+//   obtenerAtributosColeccion();
+// }, []);

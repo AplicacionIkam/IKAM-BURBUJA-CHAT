@@ -1,5 +1,5 @@
 import { router, Stack, useLocalSearchParams } from "expo-router";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import {
   ScrollView,
   StyleSheet,
@@ -17,8 +17,11 @@ import {
   suscribirseAlChat,
   getReceptorToken,
   actualizarUnreadCount,
+  verificarSiEsPyme,
 } from "@/services/services";
 import { auth } from "@/firebase/config-ikam";
+import Toast from "react-native-root-toast";
+import { RootSiblingParent } from "react-native-root-siblings";
 
 type Mensaje = {
   user: string;
@@ -71,14 +74,20 @@ async function sendPushNotification(
 
 const chatNuevo = () => {
   const item = useLocalSearchParams();
-  const [loading, setLoading] = useState(true);
   const [userData, setUserData] = useState<User | null>();
   const [receiverToken, setReceiverToken] = useState<string | null>(null);
   const [mensajes, setMensajes] = useState<Mensaje[]>([]);
+  const [mensajesCargados, setMensajesCargados] = useState(false);
   const [mensaje, setMensaje] = useState("");
+  const scrollViewRef = useRef<ScrollView>(null);
 
-  // Asegúrate de que esta propiedad exista
-  const user = auth.currentUser; // Obtener usuario autenticado
+  const user = auth.currentUser;
+
+  useEffect(() => {
+    if (mensajes.length > 0 && mensajesCargados && scrollViewRef.current) {
+      scrollViewRef.current.scrollToEnd({ animated: true });
+    }
+  }, [mensajes, mensajesCargados]);
 
   useEffect(() => {
     const fetchUserData = async () => {
@@ -96,15 +105,23 @@ const chatNuevo = () => {
   useEffect(() => {
     if (userData?.uid && item) {
       const chatId = item.id;
+
       const crearChatYEscucharMensajes = () => {
-        const unsubscribe = suscribirseAlChat(chatId.toString(), (mensajes) => {
-          setMensajes(mensajes);
-        });
+        const unsubscribe = suscribirseAlChat(
+          chatId.toString(),
+          (mensajesActualizados) => {
+            if (mensajesActualizados.length !== mensajes.length) {
+              setMensajes(mensajesActualizados);
+            }
+          }
+        );
+
         return () => unsubscribe && unsubscribe();
       };
+
       crearChatYEscucharMensajes();
     }
-  }, [userData]);
+  }, [userData, item.id]); // Elimina la dependencia de mensajesCargados
 
   // Obtener el token del receptor
   useEffect(() => {
@@ -133,13 +150,29 @@ const chatNuevo = () => {
 
   // Enviar mensaje y notificación push
   const enviarMesaje = async () => {
-    if (mensaje.trim() === "") return; // Asegúrate de que hay un token
+    if (mensaje.trim() === "") {
+      Toast.show("¡Atención! Escribe un mensaje.", {
+        duration: Toast.durations.LONG,
+        position: Toast.positions.BOTTOM,
+        shadow: true,
+        animation: true,
+        hideOnPress: true,
+        delay: 0,
+      });
+      return;
+    }
 
     const chatId = item.id;
 
     if (userData?.uid) {
+      const isPyme = await verificarSiEsPyme(userData.uid);
+      let tipo = isPyme ? "unreadCountUser" : "unreadCountPyme";
+      if (userData.uid === item.idUser) {
+        tipo = "unreadCountPyme";
+      }
+
       // Primero, actualiza el contador de mensajes no leídos
-      await actualizarUnreadCount(chatId, 1); // Cambiar de 0 a 1 para incrementar
+      await actualizarUnreadCount(chatId, tipo, 1);
 
       // Enviar mensaje al chat
       await enviarMensaje(chatId.toString(), mensaje, userData.uid);
@@ -175,77 +208,82 @@ const chatNuevo = () => {
   };
 
   return (
-    <View style={estilos.container}>
-      <Stack.Screen
-        options={{
-          headerStyle: { backgroundColor: colorsIkam.rojo.backgroundColor },
-          headerTitle: item.nombre ? item.nombre.toString() : "Sin nombre",
-          headerTintColor: "white",
-          headerBackTitle: "Volver",
-          headerShown: true,
-          headerTitleAlign: "center",
-        }}
-      />
-      <View style={estilos.chatContainer}>
-        <ScrollView>
-          <View style={estilos.messagesContainer}>
-            <Text
-              style={{ fontSize: 20, textAlign: "center", marginTop: 15 }}
-            ></Text>
-            {mensajes.length > 0 ? (
-              <View>
-                {mensajes.map((m, index) => (
-                  <View key={index}>
-                    {m.user == userData?.uid ? (
-                      <View style={estilos.containerMensajeDerecha}>
-                        <View style={estilos.messageContainerDer}>
-                          <View>
-                            <Text style={estilos.mensajeTexto}>
-                              {m.mensaje}
-                            </Text>
-                            <Text style={estilos.mensajeHora}>
-                              {formatearHora(m.timestamp)}
-                            </Text>
+    <RootSiblingParent>
+      <View style={estilos.container}>
+        <Stack.Screen
+          options={{
+            headerStyle: { backgroundColor: colorsIkam.rojo.backgroundColor },
+            headerTitle: item.nombre ? item.nombre.toString() : "Sin nombre",
+            headerTintColor: "white",
+            headerBackTitle: "Volver",
+            headerShown: true,
+            headerTitleAlign: "center",
+          }}
+        />
+        <View style={estilos.chatContainer}>
+          <ScrollView ref={scrollViewRef} style={{ flex: 1 }}>
+            <View style={estilos.messagesContainer}>
+              <Text
+                style={{ fontSize: 20, textAlign: "center", marginTop: 15 }}
+              ></Text>
+              {mensajes.length > 0 ? (
+                <View>
+                  {mensajes.map((m, index) => (
+                    <View key={index}>
+                      {m.user == userData?.uid ? (
+                        <View style={estilos.containerMensajeDerecha}>
+                          <View style={estilos.messageContainerDer}>
+                            <View>
+                              <Text style={estilos.mensajeTexto}>
+                                {m.mensaje}
+                              </Text>
+                              <Text style={estilos.mensajeHora}>
+                                {formatearHora(m.timestamp)}
+                              </Text>
+                            </View>
                           </View>
                         </View>
-                      </View>
-                    ) : (
-                      <View style={estilos.containerMensajeIzquierda}>
-                        <View style={estilos.messageContainerIzq}>
-                          <View>
-                            <Text style={estilos.mensajeTexto}>
-                              {m.mensaje}
-                            </Text>
-                            <Text style={estilos.mensajeHora}>
-                              {formatearHora(m.timestamp)}
-                            </Text>
+                      ) : (
+                        <View style={estilos.containerMensajeIzquierda}>
+                          <View style={estilos.messageContainerIzq}>
+                            <View>
+                              <Text style={estilos.mensajeTexto}>
+                                {m.mensaje}
+                              </Text>
+                              <Text style={estilos.mensajeHora}>
+                                {formatearHora(m.timestamp)}
+                              </Text>
+                            </View>
                           </View>
                         </View>
-                      </View>
-                    )}
-                  </View>
-                ))}
-              </View>
-            ) : (
-              <View>{/* <Text>No hay mensajes todavia</Text> */}</View>
-            )}
-          </View>
-        </ScrollView>
-        <View style={estilos.inputContainer}>
-          <View style={estilos.inputRow}>
-            <TextInput
-              placeholder="Mensaje"
-              style={estilos.textInput}
-              value={mensaje}
-              onChangeText={(mensaje) => setMensaje(mensaje)}
-            />
-            <TouchableOpacity style={estilos.sendButton} onPress={enviarMesaje}>
-              <Feather name="send" size={25} color="#737373" />
-            </TouchableOpacity>
+                      )}
+                    </View>
+                  ))}
+                </View>
+              ) : (
+                <View>{/* <Text>No hay mensajes todavia</Text> */}</View>
+              )}
+            </View>
+          </ScrollView>
+          <View style={estilos.inputContainer}>
+            <View style={estilos.inputRow}>
+              <TextInput
+                placeholder="Mensaje"
+                style={estilos.textInput}
+                value={mensaje}
+                onChangeText={(mensaje) => setMensaje(mensaje)}
+              />
+              <TouchableOpacity
+                style={estilos.sendButton}
+                onPress={enviarMesaje}
+              >
+                <Feather name="send" size={25} color="#737373" />
+              </TouchableOpacity>
+            </View>
           </View>
         </View>
       </View>
-    </View>
+    </RootSiblingParent>
   );
 };
 
@@ -282,7 +320,7 @@ const estilos = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "flex-end",
     marginBottom: 12,
-    marginRight: 12,
+    marginRight: 14,
   },
   messageContainerDer: {
     alignSelf: "flex-end",
@@ -302,7 +340,6 @@ const estilos = StyleSheet.create({
   },
   inputContainer: {
     padding: 8,
-    marginBottom: 10,
   },
   inputRow: {
     flexDirection: "row",
@@ -321,11 +358,14 @@ const estilos = StyleSheet.create({
     marginLeft: 15,
   },
   sendButton: {
-    position: "relative",
     backgroundColor: "#e5e5e5",
-    padding: 5,
     marginRight: 2,
-    borderRadius: 50, // rounded-full
+    borderRadius: 50,
+    padding: 9,
+    elevation: 1,
+    position: "absolute",
+    top: 4,
+    right: 4,
   },
 });
 

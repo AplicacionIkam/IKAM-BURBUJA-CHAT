@@ -243,22 +243,19 @@ const LoginScreen = () => {
               </TouchableOpacity>
 
               <TouchableOpacity
-                onPress={handleGuestLogin}
+                onPress={() => router.push("/RegisterScreen")}
                 style={[styles.btnContain]}
               >
                 <View style={[styles.btn, { backgroundColor: "#222C57" }]}>
                   <Text style={[styles.btnText, { color: "#fff" }]}>
-                    Ingresar como Invitado
+                    Regístrate
                   </Text>
                 </View>
               </TouchableOpacity>
 
-              <Text style={styles.label}>
-                ¿No tienes cuenta?{" "}
-                <Link href={"/RegisterScreen"} style={styles.labelLink}>
-                  Regístrate en IKAM
-                </Link>
-              </Text>
+              <TouchableOpacity onPress={handleGuestLogin}>
+                <Text style={styles.labelLink}>Ingresa como invitado</Text>
+              </TouchableOpacity>
             </View>
           )}
           <ModalPassword
@@ -352,12 +349,10 @@ const styles = StyleSheet.create({
     fontWeight: "900",
     color: "#fff",
   },
-  label: {
-    marginTop: 25,
+  labelLink: {
+    marginVertical: 15,
     textAlign: "center",
     fontSize: 16,
-  },
-  labelLink: {
     color: "blue",
   },
 });

@@ -5,7 +5,7 @@ import {
   Image,
   StyleSheet,
   Text,
-  ScrollView,
+  FlatList,
 } from "react-native";
 import { StatusBar } from "expo-status-bar";
 import { collection, getDocs, onSnapshot } from "firebase/firestore";
@@ -14,15 +14,15 @@ import ListaPymes from "@/components/pymes";
 
 interface Pyme {
   id: string;
-  [key: string]: any; // Permite propiedades adicionales
+  [key: string]: any;
 }
 
 export default function App() {
   const [pymeSeleccionada, setPymeSeleccionada] = useState<null | Pyme>(null);
   const [vistaDetalles, setVistaDetalles] = useState<boolean>(false);
-  const [pymesLikes, setPymesLikes] = useState<string[]>([]); // Arreglo de IDs de pymes que les gustan
-  const [pymesQ, setPymesQ] = useState<Pyme[]>([]); // Arreglo de pymes filtradas
-  const [pymes, setPymes] = useState<Pyme[]>([]); // Arreglo de pymes obtenidas de Firestore
+  const [pymesLikes, setPymesLikes] = useState<string[]>([]);
+  const [pymesQ, setPymesQ] = useState<Pyme[]>([]);
+  const [pymes, setPymes] = useState<Pyme[]>([]);
 
   useEffect(() => {
     fetchPymes();
@@ -40,7 +40,7 @@ export default function App() {
       const likedPymes = pymes.filter((pyme) => pymesLikes.includes(pyme.id));
       setPymesQ(likedPymes);
     } else {
-      setPymesQ([]); // Resetear si no hay pymes o likes
+      setPymesQ([]);
     }
   }, [pymes, pymesLikes]);
 
@@ -60,7 +60,7 @@ export default function App() {
   const fetchPymesLikes = () => {
     try {
       const user = auth.currentUser;
-      if (!user) return; // Asegurarse de que el usuario esté autenticado
+      if (!user) return;
 
       const likesCollection = collection(ikam, "likes");
       const unsubscribe = onSnapshot(likesCollection, (querySnapshot) => {
@@ -80,27 +80,23 @@ export default function App() {
   return (
     <SafeAreaView style={styles.safeArea}>
       <StatusBar style="light" />
-      <Text style={styles.favoritesText}>Favoritos</Text>
-      <ScrollView>
-        {pymesQ.length > 0 ? (
-          <View style={styles.pymesContainer}>
-            <ListaPymes
-              setPymeSeleccionada={setPymeSeleccionada}
-              pymesQ={pymesQ}
-              setVistaDetalles={setVistaDetalles}
-            />
-          </View>
-        ) : (
-          <View style={styles.notFoundContainer}>
-            <Text style={styles.notFoundText}>¡No tienes favoritos!</Text>
-            <Text style={styles.notFoundText}>Añade algunos</Text>
-            <Image
-              source={require("@/assets/img/abuNotFound.png")}
-              style={styles.notfoundImg}
-            />
-          </View>
-        )}
-      </ScrollView>
+      <Text style={styles.favoritesTitle}>Favoritos</Text>
+      {pymesQ.length > 0 ? (
+        <FlatList
+          data={pymesQ}
+          renderItem={({ item }) => <ListaPymes pyme={item} />}
+          keyExtractor={(item) => item.id}
+        />
+      ) : (
+        <View style={styles.noFavoritesContainer}>
+          <Text style={styles.noFavoritesText}>¡No tienes favoritos!</Text>
+          <Text style={styles.noFavoritesText}>Añade algunos</Text>
+          <Image
+            source={require("@/assets/img/abuNotFound.png")}
+            style={styles.noFavoritesImage}
+          />
+        </View>
+      )}
     </SafeAreaView>
   );
 }
@@ -110,30 +106,24 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "#F0F0F0",
   },
-  favoritesText: {
+  favoritesTitle: {
     marginVertical: 15,
     fontSize: 35,
     fontWeight: "bold",
     textAlign: "center",
   },
-  pymesContainer: {
+  noFavoritesContainer: {
     flex: 1,
-    paddingHorizontal: 20,
-    paddingTop: 10,
-  },
-  notFoundContainer: {
-    flex: 1,
-    paddingTop: 25,
     flexDirection: "column",
     justifyContent: "center",
     alignItems: "center",
   },
-  notfoundImg: {
+  noFavoritesImage: {
     width: 300,
     height: 300,
     marginTop: 15,
   },
-  notFoundText: {
+  noFavoritesText: {
     color: "#888",
     textAlign: "center",
     fontSize: 30,

@@ -14,10 +14,13 @@ import { getUserData } from "@/auth/authService";
 import { User } from "@/models/User";
 import {
   enviarMensaje,
+  enviarMensajeDefault,
   suscribirseAlChat,
   verificarYCrearChat,
   actualizarUnreadCount,
+  verificarSiEsPyme,
 } from "@/services/services";
+import Toast from "react-native-root-toast";
 
 type Mensaje = {
   user: string;
@@ -25,10 +28,48 @@ type Mensaje = {
   timestamp: string;
 };
 
+async function sendPushNotification(
+  expoPushToken: string,
+  title: string,
+  body: string
+) {
+  const message = {
+    to: expoPushToken,
+    sound: "default",
+    title: title,
+    body: body,
+    data: { someData: "chat message" },
+  };
+
+  try {
+    const response = await fetch("https://exp.host/--/api/v2/push/send", {
+      method: "POST",
+      headers: {
+        Accept: "application/json",
+        "Accept-encoding": "gzip, deflate",
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(message),
+    });
+
+    const data = await response.json();
+
+    if (response.ok) {
+      return true;
+    } else {
+      return false;
+    }
+  } catch (error) {
+    console.error("Error de red o al enviar la notificación:", error);
+    return false;
+  }
+}
+
 const chatNuevo = () => {
   const item = useLocalSearchParams();
   const [loading, setLoading] = useState(true);
   const [userData, setUserData] = useState<User | null>();
+  const [receiverToken, setReceiverToken] = useState<string | null>(null);
 
   const [mensajes, setMensajes] = useState<Mensaje[]>([]);
   const [mensaje, setMensaje] = useState("");
@@ -65,12 +106,44 @@ const chatNuevo = () => {
     }
   }, [userData]);
 
-  const enviarMesaje = () => {
-    if (mensaje.trim() === "") return;
+  const enviarMesaje = async () => {
+    if (mensaje.trim() === "") {
+      Toast.show("¡Atención! Escribe un mensaje.", {
+        duration: Toast.durations.LONG,
+        position: Toast.positions.BOTTOM,
+        shadow: true,
+        animation: true,
+        hideOnPress: true,
+        delay: 0,
+      });
+      return;
+    }
     const chatId = userData?.uid + "-" + item.id;
     if (userData?.uid) {
-      actualizarUnreadCount(chatId, 1); // Cambiar de 0 a 1 para incrementar
+      await actualizarUnreadCount(chatId, "unreadCountPyme", 1);
       enviarMensaje(chatId, mensaje, userData.uid);
+
+      if (receiverToken) {
+        // Preparar notificación
+        const tituloNotificacion = userData.display_name; // Usar el nombre del usuario como título
+        const cuerpoNotificacion = mensaje; // Usar el mensaje como cuerpo
+
+        // Enviar notificación
+        const notificacionEnviada = await sendPushNotification(
+          receiverToken, // Asegúrate de pasar un array de tokens
+          tituloNotificacion,
+          cuerpoNotificacion
+        );
+
+        if (notificacionEnviada) {
+          console.log(
+            "La notificación fue enviada correctamente al usuario con token: " +
+              receiverToken
+          );
+        } else {
+          console.log("Hubo un error al enviar la notificación");
+        }
+      }
     }
     setMensaje("");
   };
@@ -79,20 +152,6 @@ const chatNuevo = () => {
     const date = timestamp.toDate(); // Convertir el Timestamp a objeto Date
     return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }); // Formato de hora
   };
-
-  // useEffect(() => {
-  //   if (userData?.uid && item.id) {
-  //     const chatId = userData.uid + "-" + item.id;
-  //     console.log("Chat ID generado:", chatId);
-
-  //     const unsubscribe = suscribirseAlChat(chatId, (mensajes) => {
-  //       console.log("Mensajes recibidos:", mensajes);
-  //       setMensajes(mensajes);
-  //     });
-
-  //     return () => unsubscribe && unsubscribe();
-  //   }
-  // }, [userData]);
 
   return (
     <View style={estilos.container}>
@@ -246,11 +305,14 @@ const estilos = StyleSheet.create({
     marginLeft: 15,
   },
   sendButton: {
-    position: "relative",
     backgroundColor: "#e5e5e5",
-    padding: 5,
     marginRight: 2,
-    borderRadius: 50, // rounded-full
+    borderRadius: 50,
+    padding: 9,
+    elevation: 1,
+    position: "absolute",
+    top: 4,
+    right: 4,
   },
 });
 

@@ -5,7 +5,6 @@ import {
   Image,
   View,
   Text,
-  FlatList,
   StyleSheet,
   Dimensions,
   ActivityIndicator,
@@ -13,70 +12,57 @@ import {
 
 const { width: viewportWidth } = Dimensions.get("window");
 
-const ListaPymes = ({ setPymeSeleccionada, pymesQ, setVistaDetalles }) => {
+const ListaPymes = ({ pyme }) => {
+  {
+    /* Esto es para asegurar que se recibe un solo pyme */
+  }
   const [loadingImage, setLoadingImage] = useState({});
 
-  const manejarPymePresionada = (pymeId) => {
-    setPymeSeleccionada(pymeId);
-    setVistaDetalles(true);
-  };
-
-  const renderizarItemPyme = ({ item }) => (
+  return (
     <Link
       asChild
       href={{
         pathname: "/pyme/[pymeId]",
-        params: { pymeId: item.id },
+        params: { pymeId: pyme.id },
       }}
     >
-      <TouchableOpacity
-        style={estilos.tarjeta}
-        // onPress={() => manejarPymePresionada(item.id)}
-      >
-        <View style={estilos.imagenContenedor}>
-          {loadingImage[item.id] && (
+      <TouchableOpacity style={styles.card}>
+        <View style={styles.imageContainer}>
+          {loadingImage[pyme.id] && (
             <ActivityIndicator
               size="large"
               color="#CC0000"
-              style={estilos.indicadorCarga}
+              style={styles.loadingIndicator}
             />
           )}
           <Image
-            source={{ uri: item.imagen1 }}
-            style={estilos.imagenTarjeta}
+            source={{ uri: pyme.imagen1 }}
+            style={styles.cardImage}
             onLoadStart={() =>
               setLoadingImage((prevState) => ({
                 ...prevState,
-                [item.id]: true,
+                [pyme.id]: true,
               }))
             }
             onLoadEnd={() =>
               setLoadingImage((prevState) => ({
                 ...prevState,
-                [item.id]: false,
+                [pyme.id]: false,
               }))
             }
           />
         </View>
-        <View style={estilos.detalleTarjeta}>
-          <Text style={estilos.tituloTarjeta}>{item.nombre_pyme}</Text>
-          <Text style={estilos.subtituloTarjeta}>{item.direccion}</Text>
+        <View style={styles.cardDetails}>
+          <Text style={styles.cardTitle}>{pyme.nombre_pyme}</Text>
+          <Text style={styles.cardSubtitle}>{pyme.direccion}</Text>
         </View>
       </TouchableOpacity>
     </Link>
   );
-
-  return (
-    <FlatList
-      data={pymesQ}
-      renderItem={renderizarItemPyme}
-      keyExtractor={(item) => item.id}
-    />
-  );
 };
 
-const estilos = StyleSheet.create({
-  tarjeta: {
+const styles = StyleSheet.create({
+  card: {
     borderWidth: 1,
     borderColor: "#ddd",
     borderRadius: 33,
@@ -86,41 +72,41 @@ const estilos = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
-    elevation: 2,
+    elevation: 5,
     width: viewportWidth * 0.9,
     marginVertical: 10,
     alignSelf: "center",
   },
-  imagenContenedor: {
+  imageContainer: {
     width: viewportWidth * 0.9,
     height: 250,
     position: "relative",
     justifyContent: "center",
     alignItems: "center",
   },
-  imagenTarjeta: {
+  cardImage: {
     width: "100%",
     height: "100%",
     borderTopLeftRadius: 10,
     resizeMode: "stretch",
   },
-  detalleTarjeta: {
+  cardDetails: {
     flex: 1,
     padding: 15,
   },
-  tituloTarjeta: {
+  cardTitle: {
     textAlign: "center",
     fontSize: 21,
     fontWeight: "bold",
     marginBottom: 8,
   },
-  subtituloTarjeta: {
+  cardSubtitle: {
     textAlign: "center",
     fontSize: 14,
     color: "#888",
     marginBottom: 5,
   },
-  indicadorCarga: {
+  loadingIndicator: {
     position: "absolute",
   },
 });

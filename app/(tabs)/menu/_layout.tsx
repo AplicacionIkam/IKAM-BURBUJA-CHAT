@@ -1,27 +1,22 @@
-import React, { type ComponentProps, useState, useEffect } from "react";
+import React, { useState, useEffect, type ComponentProps } from "react";
 import { Tabs } from "expo-router";
 import { View, Text, StyleSheet } from "react-native";
+
 import { TabBarIcon } from "@/components/navigation/TabBarIcon";
-import colorsIkam from "@/assets/estilos";
 import {
   obtenerChatsEnTiempoReal,
   verificarSiEsPyme,
-} from "@/services/services"; // Nueva función de servicio
+} from "@/services/services";
 import { auth } from "@/firebase/config-ikam";
+import colorsIkam from "@/assets/estilos";
 
-// Extraemos el tipo para el nombre de los íconos válidos
 type IoniconsName = ComponentProps<typeof TabBarIcon>["name"];
 
 const createTabBarIcon =
-  (focusedName: IoniconsName, unfocusedName: IoniconsName) =>
-  ({ color, focused }: { color: string; focused: boolean }) =>
-    <TabBarIcon name={focused ? focusedName : unfocusedName} color={color} />;
-
-const createTabBarIconWithBadge =
   (
     focusedName: IoniconsName,
     unfocusedName: IoniconsName,
-    unreadCount: number
+    unreadCount?: number
   ) =>
   ({ color, focused }: { color: string; focused: boolean }) =>
     (
@@ -29,6 +24,7 @@ const createTabBarIconWithBadge =
         <TabBarIcon
           name={focused ? focusedName : unfocusedName}
           color={color}
+          size={25}
         />
         {unreadCount > 0 && (
           <View style={styles.badge}>
@@ -41,7 +37,6 @@ const createTabBarIconWithBadge =
 export default function TabLayout() {
   const [unreadMessages, setUnreadMessages] = useState(0);
 
-  // Función para obtener y sumar los mensajes no leídos de todos los chats
   useEffect(() => {
     const obtenerMensajesNoLeidos = async () => {
       const user = auth.currentUser;
@@ -49,62 +44,39 @@ export default function TabLayout() {
         console.error("No hay usuario autenticado");
         return;
       }
-  
-      let userId = user.uid;
-      const isPyme = await verificarSiEsPyme(userId);
-      const tipo = isPyme ? "idPyme" : "idUser"; // Determinamos el tipo de usuario
-  
-      // Si es una pyme, usamos el idPyme, de lo contrario usamos el idUser
-      const currentUserId = isPyme ? isPyme : userId; // Si es pyme o cliente, usar el idUser adecuado
-  
-      // Usamos obtenerTodosLosChats con el callback correcto
-      const unsubscribe = obtenerChatsEnTiempoReal(
-        currentUserId,
-        tipo,
-        (chats) => {
-          let totalMensajesNoLeidos = 0;
-  
-          // Calculamos los mensajes no leídos dependiendo del tipo de usuario
-          chats.forEach((chat) => {
-            if (isPyme) {
-              // Si es una pyme, contamos los mensajes no leídos de los clientes
-              if (chat.idUser !== userId) {
-                totalMensajesNoLeidos += chat.unreadCount || 0;
-              }
-            } else {
-              // Si es un cliente, contamos los mensajes no leídos de las pymes
-              if (chat.idPyme === userId) {
-                totalMensajesNoLeidos += chat.unreadCount || 0;
-              }
-            }
-          });
-  
-          // Establecemos el número total de mensajes no leídos
-          setUnreadMessages(totalMensajesNoLeidos);
+
+      const userId = user.uid;
+
+      const unsubscribe = await obtenerChatsEnTiempoReal(
+        userId,
+        (unreadMessages) => {
+          setUnreadMessages(unreadMessages);
         }
       );
-  
-      return unsubscribe; // Asegúrate de que se devuelve la función de limpieza
+
+      return unsubscribe;
     };
-  
-    // Ejecutamos la función
-    const unsubscribe = obtenerMensajesNoLeidos();
-  
-    // Limpiar la suscripción al desmontar el componente
+
+    const unsubscribePromise = obtenerMensajesNoLeidos();
+
     return () => {
-      if (unsubscribe && typeof unsubscribe === "function") {
-        unsubscribe(); // Cancelamos la suscripción si es una función
-      }
+      unsubscribePromise.then((unsubscribe) => {
+        if (unsubscribe && typeof unsubscribe === "function") {
+          unsubscribe();
+        }
+      });
     };
-  }, []); // Aquí puedes agregar dependencias, como el ID del usuario  
+  }, []);
 
   return (
     <Tabs
       screenOptions={{
         tabBarStyle: {
           backgroundColor: "#222C57",
-          height: 65,
-          paddingBottom: 10,
+          height: 57,
+        },
+        tabBarLabelStyle: {
+          marginTop: 3,
         },
         tabBarActiveTintColor: "#FFFFFF",
         headerShown: true,
@@ -131,7 +103,7 @@ export default function TabLayout() {
         name="chat"
         options={{
           title: "Chat",
-          tabBarIcon: createTabBarIconWithBadge(
+          tabBarIcon: createTabBarIcon(
             "chatbubble-ellipses",
             "chatbubble-outline",
             unreadMessages
@@ -163,7 +135,7 @@ const styles = StyleSheet.create({
   },
   badgeText: {
     color: "white",
-    fontSize: 12,
+    fontSize: 9,
     fontWeight: "bold",
   },
 });

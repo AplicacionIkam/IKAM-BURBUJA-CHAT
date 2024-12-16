@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useState, memo } from "react";
 import {
   FlatList,
   Image,
@@ -7,113 +7,149 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { Link, router } from "expo-router";
+import { router } from "expo-router";
 import colorsIkam from "@/assets/estilos";
-import { actualizarUnreadCount } from "@/services/services";
+import { verificarSiEsPyme, actualizarUnreadCount } from "@/services/services";
 
-const Chatlist = ({ users, user }) => {
+const Chatlist = ({ users, user }: any) => {
+  const [isPyme, setIsPyme] = useState(false);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      const result = await verificarSiEsPyme(user);
+      setIsPyme(result);
+    };
+    fetchData();
+  }, [user]);
+
   const openChat = (item: any) => {
     router.push({ pathname: "/chat/chat", params: item });
 
+    var tipo = isPyme ? "unreadCountPyme" : "unreadCountUser";
+    if (user === item.idUser) {
+      tipo = "unreadCountUser";
+      actualizarUnreadCount(item.id, tipo, 0);
+    }
+
     if (item.user !== user) {
-      actualizarUnreadCount(item.id, 0); // Solo reseteará el contador si el receptor abre el chat
+      actualizarUnreadCount(item.id, tipo, 0);
     }
   };
 
-  const ChatItem = (item: any) => {
-    return (
-      <View>
-        <TouchableOpacity
-          style={estilos.touchable}
-          onPress={() => openChat(item)}
-        >
-          {item.img ? (
-            <View>
-              <Image source={{ uri: item.img }} style={estilos.tarjetaImg} />
-            </View>
-          ) : (
-            <View style={estilos.circle}>
-              <Text style={estilos.text}>{item.nombre[0]}</Text>
-            </View>
-          )}
-
-          <View style={estilos.textContainer}>
-            <View style={estilos.headerContainer}>
-              <Text style={estilos.nameText}>{item.nombre}</Text>
-            </View>
-            {item.user == user ? (
-              <View>
-                <Text style={estilos.messageText}>
-                  Tu: {item.ultimoMensaje}
-                </Text>
-              </View>
-            ) : (
-              <Text style={estilos.messageTextOtros}>{item.ultimoMensaje}</Text>
-            )}
-            <Text style={estilos.timeText}>
-              {item.hora
-                ? new Date(item.hora.seconds * 1000).toLocaleDateString([], {
-                    day: "2-digit",
-                    month: "2-digit",
-                    year: "numeric",
-                  }) +
-                  " " +
-                  new Date(item.hora.seconds * 1000).toLocaleTimeString([], {
-                    hour: "2-digit",
-                    minute: "2-digit",
-                  })
-                : ""}
-            </Text>
-          </View>
-          {item.user !== user && item.unreadCount > 0 && (
-            <View style={estilos.badge}>
-              <Text style={estilos.badgeText}>{item.unreadCount}</Text>
-            </View>
-          )}
-        </TouchableOpacity>
-      </View>
-    );
+  const formatDate = (timestamp: any) => {
+    return timestamp
+      ? new Date(timestamp.seconds * 1000).toLocaleDateString([], {
+          day: "2-digit",
+          month: "2-digit",
+          year: "numeric",
+        }) +
+          " " +
+          new Date(timestamp.seconds * 1000).toLocaleTimeString([], {
+            hour: "2-digit",
+            minute: "2-digit",
+          })
+      : "";
   };
 
-  const chatsFiltrados = users.filter((user: any) => user.ultimoMensaje);
-
-  const chatsOrdenados = chatsFiltrados.sort(
-    (a: any, b: any) =>
-      new Date(b.hora.seconds * 1000).getTime() -
-      new Date(a.hora.seconds * 1000).getTime()
-  );
+  const chatsOrdenados = users
+    .filter(
+      (user: any) => user.ultimoMensaje && user.hora?.seconds !== undefined
+    )
+    .sort((a: any, b: any) => {
+      const timeA = a.hora.seconds * 1000;
+      const timeB = b.hora.seconds * 1000;
+      return timeB - timeA;
+    });
 
   return (
-    <View style={{ flex: 1 }}>
-      <FlatList
-        data={chatsOrdenados} // Usa el array filtrado aquí
-        contentContainerStyle={{ paddingVertical: 6 }}
-        showsVerticalScrollIndicator={false}
-        renderItem={({ item }) => ChatItem(item)} // Asegúrate de pasar el item
-        keyExtractor={(item) => item.id.toString()} // Usa un id único
-      />
-    </View>
+    <FlatList
+      data={chatsOrdenados}
+      contentContainerStyle={styles.listContainer}
+      showsVerticalScrollIndicator={false}
+      renderItem={({ item }) => (
+        <ChatItem
+          item={item}
+          user={user}
+          isPyme={isPyme}
+          openChat={openChat}
+          formatDate={formatDate}
+        />
+      )}
+      keyExtractor={(item) => item.id.toString()}
+    />
   );
 };
 
-const estilos = StyleSheet.create({
-  touchable: {
+const ChatItem = memo(({ item, user, isPyme, openChat, formatDate }: any) => {
+  return (
+    <TouchableOpacity
+      style={styles.chatItemTouchable}
+      onPress={() => openChat(item)}
+    >
+      {item.img ? (
+        <Image source={{ uri: item.img }} style={styles.profileImage} />
+      ) : (
+        <View style={styles.initialCircle}>
+          <Text style={styles.initialText}>{item.nombre[0]}</Text>
+        </View>
+      )}
+
+      <View style={styles.textContainer}>
+        <View style={styles.headerContainer}>
+          <Text style={styles.nameText}>{item.nombre}</Text>
+        </View>
+        <Text
+          style={
+            item.user === user ? styles.messageText : styles.messageTextOthers
+          }
+        >
+          {item.user === user
+            ? `Tú: ${item.ultimoMensaje}`
+            : item.ultimoMensaje}
+        </Text>
+        <Text style={styles.timeText}>{formatDate(item.hora)}</Text>
+      </View>
+      {user === item.idUser && item.unreadCountUser > 0 && (
+        <View style={styles.unreadBadge}>
+          <Text style={styles.unreadBadgeText}>{item.unreadCountUser}</Text>
+        </View>
+      )}
+
+      {user !== item.idUser &&
+        (isPyme ? item.unreadCountPyme : item.unreadCountUser) > 0 && (
+          <View style={styles.unreadBadge}>
+            <Text style={styles.unreadBadgeText}>
+              {isPyme ? item.unreadCountPyme : item.unreadCountUser}
+            </Text>
+          </View>
+        )}
+    </TouchableOpacity>
+  );
+});
+
+const styles = StyleSheet.create({
+  listContainer: {
+    paddingVertical: 7,
+  },
+  chatItemTouchable: {
     flexDirection: "row",
     justifyContent: "space-between",
     marginHorizontal: 16,
     alignItems: "center",
     gap: 12,
-    marginBottom: 6,
+    marginBottom: 8,
     backgroundColor: "white",
-    padding: 15,
+    paddingHorizontal: 15,
+    paddingVertical: 8,
     borderRadius: 10,
+    elevation: 3,
   },
-  tarjetaImg: {
+  profileImage: {
     height: 50,
     width: 50,
     borderRadius: 25,
   },
-  circle: {
+  initialCircle: {
     width: 50,
     height: 50,
     borderRadius: 25,
@@ -121,7 +157,7 @@ const estilos = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },
-  text: {
+  initialText: {
     color: "white",
     fontSize: 25,
     fontWeight: "bold",
@@ -144,23 +180,23 @@ const estilos = StyleSheet.create({
   messageText: {
     color: "#555",
   },
-  messageTextOtros: {
+  messageTextOthers: {
     color: colorsIkam.azulTex.color,
   },
-  badge: {
+  unreadBadge: {
     position: "absolute",
     right: -6,
     top: -3,
     backgroundColor: "red",
-    borderRadius: 10,
-    width: 20,
-    height: 20,
+    borderRadius: 15,
+    width: 25,
+    height: 25,
     justifyContent: "center",
     alignItems: "center",
   },
-  badgeText: {
+  unreadBadgeText: {
     color: "white",
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: "bold",
   },
 });

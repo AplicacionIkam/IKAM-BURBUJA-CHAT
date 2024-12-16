@@ -19,6 +19,7 @@ import { Categoria } from "@/models/Categoria";
 import { SubCategoria } from "@/models/SubCategoria";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { User } from "@/models/User";
+import user from "@/app/configuracion/perfil copy";
 
 interface Chat {
   id: string;
@@ -220,17 +221,24 @@ export const listenToUserChanges = (userUID: any, setUserData: any) => {
 
 export const verificarYCrearChat = async (
   chatId: string,
-  userid: string,
-  pymeid: string
+  userId: string,
+  pymeId: string
 ) => {
   const chatDocRef = doc(ikam, "chat", chatId);
   const chatDoc = await getDoc(chatDocRef);
   if (!chatDoc.exists()) {
     await setDoc(chatDocRef, {
       creadoEn: new Date(),
-      idPyme: pymeid,
-      idUser: userid,
+      idPyme: pymeId,
+      idUser: userId,
     });
+  }
+
+  const chatDocSnap = await getDoc(chatDocRef);
+  if (chatDocSnap.exists() && !chatDocSnap.data().mensajeEnviado) {
+    if (pymeId) {
+      enviarMensajeDefault(chatId, pymeId);
+    }
   }
 };
 
@@ -320,6 +328,41 @@ export const enviarMensaje = async (
   }
 };
 
+export const enviarMensajeDefault = async (chatId: string, pymeId: string) => {
+  try {
+    const docRef = doc(ikam, "pyme", pymeId);
+    const docSnap = await getDoc(docRef);
+
+    if (!docSnap.exists()) {
+      console.error("No se encontró la pyme con ese ID");
+      return;
+    }
+
+    const pymeData = docSnap.data();
+    const nombrePyme = pymeData.nombre_pyme || "Pyme";
+
+    const idUsuarioPyme = await verificarUsuarioPorPyme(pymeId);
+    console.log(idUsuarioPyme);
+
+    if (!idUsuarioPyme) {
+      console.error("No se encontró el ID del usuario asociado a la PyME");
+      return;
+    }
+
+    const mensaje = `¡Hola! Buenos días. Estás en contacto con ${nombrePyme}. Estamos listos para ayudarte. ¿En qué podemos asistirte hoy?`;
+
+    await addDoc(collection(ikam, "chat", chatId, "mensaje"), {
+      mensaje,
+      timestamp: new Date(),
+      user: idUsuarioPyme,
+    });
+
+    console.log("Mensaje enviado correctamente");
+  } catch (error) {
+    console.error("Error al enviar el mensaje:", error);
+  }
+};
+
 export const suscribirseAMensajes = (chatId: any, callback: any) => {
   const mensajesRef = collection(ikam, "chat", chatId, "mensaje");
 
@@ -367,35 +410,53 @@ export const suscribirseAUser = (callback: (user: User[]) => void) => {
   }
 };
 
-// Ejemplo de función que recupera todos los chats
-export const obtenerChatsEnTiempoReal = (
+export const obtenerChatsEnTiempoReal = async (
   userId: string,
-  tipo: "idUser" | "idPyme",
-  callback: (chats: Chat[]) => void
-) => {
+  callback: (unreadMessages: number) => void // Callback para actualizar el estado en tiempo real
+): Promise<() => void> => {
   try {
-    // Crear la consulta dinámica
-    const chatsQuery = query(
+    const pymeId = await verificarSiEsPyme(userId);
+
+    const userQuery = query(
       collection(ikam, "chat"),
-      where(tipo, "==", userId)
+      where("idUser", "==", userId)
     );
 
-    // Escuchar los cambios en tiempo real
-    const unsubscribe = onSnapshot(chatsQuery, (querySnapshot) => {
-      const chats: Chat[] = querySnapshot.docs.map((doc) => ({
-        id: doc.id,
-        unreadCount: doc.data().unreadCount || 0,
-        idUser: doc.data().idUser,
-        idPyme: doc.data().idPyme,
-      }));
+    const pymeQuery = query(
+      collection(ikam, "chat"),
+      where("idPyme", "==", pymeId)
+    );
 
-      // Llamar al callback con los chats recuperados
-      if (typeof callback === "function") {
-        callback(chats);
-      }
+    let totalUnreadCountUser = 0;
+    let totalUnreadCountPyme = 0;
+
+    // Escuchar cambios en tiempo real para idUser
+    const unsubscribeUser = onSnapshot(userQuery, (querySnapshotUser) => {
+      totalUnreadCountUser = querySnapshotUser.docs.reduce(
+        (total, doc) => total + (doc.data().unreadCountUser || 0),
+        0
+      );
+
+      // Actualizar el callback con la suma
+      callback(totalUnreadCountUser + totalUnreadCountPyme);
     });
 
-    return unsubscribe; // Retornar la función de unsubscribe
+    // Escuchar cambios en tiempo real para idPyme
+    const unsubscribePyme = onSnapshot(pymeQuery, (querySnapshotPyme) => {
+      totalUnreadCountPyme = querySnapshotPyme.docs.reduce(
+        (total, doc) => total + (doc.data().unreadCountPyme || 0),
+        0
+      );
+
+      // Actualizar el callback con la suma
+      callback(totalUnreadCountUser + totalUnreadCountPyme);
+    });
+
+    // Retornar una función para cancelar las suscripciones
+    return () => {
+      unsubscribeUser();
+      unsubscribePyme();
+    };
   } catch (error) {
     console.error("Error al obtener los chats:", error);
     return () => {}; // Retorna una función vacía en caso de error
@@ -450,67 +511,104 @@ export const getReceptorToken = async (uid: string) => {
   }
 };
 
-// export const getReceptorToken = async (uid: string) => {
-//   //console.log(uid)
-//   const userQuery = query(collection(ikam, "users"), where("pyme", "==", uid));
-//   const querySnapshot = await getDocs(userQuery);
-
-//   if (!querySnapshot.empty) {
-//     const userData = querySnapshot.docs[0].data();
-//     //console.log(userData)
-
-//     return userData.tokens;
-//   } else {
-//     throw new Error("Usuario no encontrado");
-//   }
-// };
-
 export const actualizarUnreadCount = async (
   chatId: string,
+  tipo: string,
   newCount: number
 ) => {
   try {
     const chatRef = doc(ikam, "chat", chatId);
-    if (newCount === 0) {
-      // Si newCount es 0, reseteamos el contador
-      await updateDoc(chatRef, {
-        unreadCount: 0,
-      });
-    } else {
-      // Incrementamos en 1 si no se especifica un nuevo conteo
-      await updateDoc(chatRef, {
-        unreadCount: increment(1),
-      });
-    }
+    const field =
+      tipo === "unreadCountPyme" ? "unreadCountPyme" : "unreadCountUser";
+
+    const updateValue = newCount === 0 ? 0 : increment(1);
+
+    await updateDoc(chatRef, {
+      [field]: updateValue,
+    });
   } catch (error) {
     console.error("Error al actualizar unreadCount:", error);
   }
 };
 
+// export const actualizarUnreadCount = async (
+//   chatId: string,
+//   tipo: string,
+//   newCount: number
+// ) => {
+//   try {
+//     const chatRef = doc(ikam, "chat", chatId);
+//     if (tipo === "unreadCountPyme") {
+//       if (newCount === 0) {
+//         // Si newCount es 0, reseteamos el contador
+//         await updateDoc(chatRef, {
+//           unreadCountPyme: 0,
+//         });
+//       } else {
+//         // Incrementamos en 1 si no se especifica un nuevo conteo
+//         await updateDoc(chatRef, {
+//           unreadCountPyme: increment(1),
+//         });
+//       }
+//     } else {
+//       if (newCount === 0) {
+//         // Si newCount es 0, reseteamos el contador
+//         await updateDoc(chatRef, {
+//           unreadCountUser: 0,
+//         });
+//       } else {
+//         // Incrementamos en 1 si no se especifica un nuevo conteo
+//         await updateDoc(chatRef, {
+//           unreadCountUser: increment(1),
+//         });
+//       }
+//     }
+//   } catch (error) {
+//     console.error("Error al actualizar unreadCount:", error);
+//   }
+// };
+
 export const verificarSiEsPyme = async (userUID: string) => {
   try {
-    // Consulta a la colección de usuarios una vez
-    const querySnapshot = await getDocs(collection(ikam, "users"));
+    const userDocRef = doc(ikam, "users", userUID);
+    const userDoc = await getDoc(userDocRef);
 
-    // Busca coincidencia con el ID del documento
-    const matchingDoc = querySnapshot.docs.find((doc) => doc.id === userUID);
-
-    if (matchingDoc) {
-      // Verifica si hay un documento coincidente
-      const userData = matchingDoc.data(); // Obtiene los datos del documento
-
-      if (userData.pyme) {
-        // Si es una pyme, devuelve el ID de la pyme asignada
-        return userData.pyme; // Asegúrate de que este campo existe en tu modelo de usuario
-      } else {
-        return false; // No es una pyme
-      }
-    } else {
+    if (!userDoc.exists()) {
       console.log("No se encontró un documento del usuario.");
-      return false;
+      return null;
     }
+
+    const userData = userDoc.data();
+
+    if (userData.isPyme && userData.pyme) {
+      return userData.pyme;
+    }
+
+    return null;
   } catch (error) {
     console.error("Error al verificar si es pyme:", error);
-    return false; // Retorna `false` si hay un error
+    return null;
+  }
+};
+
+export const verificarUsuarioPorPyme = async (pymeId: string) => {
+  try {
+    const userQuery = query(
+      collection(ikam, "users"),
+      where("pyme", "==", pymeId)
+    );
+
+    const querySnapshot = await getDocs(userQuery);
+
+    if (!querySnapshot.empty) {
+      const userId = querySnapshot.docs[0].id; // El id del documento
+      return userId; // Retorna el id del documento
+    }
+
+    console.log("No se encontró un usuario con ese ID de PyME.");
+    return null;
+  } catch (error) {
+    console.error("Error al verificar el usuario por PyME:", error);
+    return null;
   }
 };

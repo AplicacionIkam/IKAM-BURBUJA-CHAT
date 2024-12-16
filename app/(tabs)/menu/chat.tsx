@@ -18,7 +18,8 @@ interface Chat {
   id: string;
   idPyme: string;
   idUser: string;
-  unreadCount: number;
+  unreadCountPyme: number;
+  unreadCountUser: number;
   ultimoMensaje?: string;
   hora?: string;
   user?: string;
@@ -33,7 +34,8 @@ interface Chats {
   ultimoMensaje?: string;
   hora?: string;
   user?: string;
-  unreadCount: number;
+  unreadCountPyme: number;
+  unreadCountUser: number;
 }
 
 const Chat = () => {
@@ -128,7 +130,8 @@ const Chat = () => {
           nombre: pyme?.nombre_pyme || "PYME no encontrada",
           ultimoMensaje: chatItem.ultimoMensaje,
           hora: chatItem.hora || new Date().toISOString(),
-          unreadCount: chatItem.unreadCount || 0, // Asegúrate de incluir esto
+          unreadCountPyme: chatItem.unreadCountPyme || 0, // Asegúrate de incluir esto
+          unreadCountUser: chatItem.unreadCountUser || 0, // Asegúrate de incluir esto
         };
       })
       .sort((a, b) => new Date(a.hora).getTime() - new Date(b.hora).getTime());
@@ -178,10 +181,11 @@ const Chat = () => {
         img: user?.photo_url || "",
         nombre: user
           ? `${user.display_name.toUpperCase()} ${user.last_name.toUpperCase()}`
-          : "PYME no encontrada",
+          : "Usuario no encontrado",
         ultimoMensaje: chatItem.ultimoMensaje,
         hora: chatItem.hora || new Date().toISOString(),
-        unreadCount: chatItem.unreadCount || 0, // Asegúrate de incluir esto
+        unreadCountPyme: chatItem.unreadCountPyme || 0, // Asegúrate de incluir esto
+        unreadCountUser: chatItem.unreadCountUser || 0, // Asegúrate de incluir esto
       };
     });
     setChatsPyme(chatsConInfo);
@@ -195,7 +199,7 @@ const Chat = () => {
           fontSize: 22,
           fontWeight: "bold",
           color: "#333",
-          marginBottom: 10,
+          marginVertical: 10,
           textAlign: "center",
         }}
       >
@@ -206,27 +210,25 @@ const Chat = () => {
   );
 
   return (
-    <ScrollView style={{ padding: 10 }}>
-      <View style={{ flex: 1 }}>
-        {chatsPyme.length > 0 &&
-          renderChatList("Mensajes de tus clientes", chatsPyme)}
-        {chats.length > 0 &&
-          renderChatList("Interacciones con otras tiendas", chats)}
-        {chats.length === 0 && chatsPyme.length === 0 && (
-          <Text
-            style={{
-              fontSize: 24,
-              color: "#888",
-              textAlign: "center",
-              marginTop: "75%",
-              fontWeight: "bold",
-            }}
-          >
-            No tienes interacciones recientes
-          </Text>
-        )}
-      </View>
-    </ScrollView>
+    <View style={{ flex: 1 }}>
+      {chatsPyme.length > 0 &&
+        renderChatList("Mensajes de tus clientes", chatsPyme)}
+      {chats.length > 0 &&
+        renderChatList("Interacciones con otras tiendas", chats)}
+      {chats.length === 0 && chatsPyme.length === 0 && (
+        <Text
+          style={{
+            fontSize: 24,
+            color: "#888",
+            textAlign: "center",
+            marginTop: "75%",
+            fontWeight: "bold",
+          }}
+        >
+          No tienes interacciones recientes
+        </Text>
+      )}
+    </View>
   );
 };
 

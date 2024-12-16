@@ -1,5 +1,4 @@
-import { FontAwesome5 } from "@expo/vector-icons";
-import CustomIcon from "@/components/CustomIcon";
+import React from "react";
 import {
   Text,
   TouchableOpacity,
@@ -7,40 +6,40 @@ import {
   StyleSheet,
   FlatList,
 } from "react-native";
-import {} from "react";
+import { FontAwesome5 } from "@expo/vector-icons";
+import CustomIcon from "@/components/CustomIcon";
 
-export default ListaCategorias = ({
+const ListaCategorias = ({
   subCategorias,
   subCategoriaSeleccionada,
   setSubCategoriaSeleccionada,
-  setSubCategoriaBuscarPyme
+  setSubCategoriaBuscarPyme,
 }) => {
-
-
   const renderizarItemCategoria = ({ item }) => {
     if (item.nombre != null) {
+      const isSelected = subCategoriaSeleccionada === item.id;
+
       return (
         <TouchableOpacity
           style={[
-            estilos.categoria,
-            subCategoriaSeleccionada === item.id && estilos.categoriaSeleccionada,
+            styles.categoryButton,
+            isSelected && styles.activeCategoryButton,
           ]}
-          onPress={() => {            
-            setSubCategoriaSeleccionada(item.id);               
-            setSubCategoriaBuscarPyme(item.nombre)
+          onPress={() => {
+            setSubCategoriaSeleccionada(item.id);
+            setSubCategoriaBuscarPyme(item.nombre);
           }}
         >
           <CustomIcon
             type={item.libreria}
             name={item.icono}
             size={24}
-            color={subCategoriaSeleccionada === item.id ? "#C61919" : "#888"}
+            color={isSelected ? "#C61919" : "#888"}
           />
           <Text
             style={[
-              estilos.textoCategoria,
-              subCategoriaSeleccionada === item.id &&
-                estilos.textoCategoriaSeleccionada,
+              styles.categoryLabel,
+              isSelected && styles.activeCategoryLabel,
             ]}
           >
             {item.nombre}
@@ -48,76 +47,73 @@ export default ListaCategorias = ({
         </TouchableOpacity>
       );
     }
+
+    return null;
   };
+
   return (
-    <View style={estilos.listaCategorias}>
+    <View style={styles.categoryContainer}>
       <FontAwesome5
         name="angle-left"
         size={25}
         color="#C61919"
-        style={estilos.iconoCategoria}
+        style={styles.navigationIcon}
         onPress={() => {}}
       />
       <FlatList
         data={subCategorias}
         renderItem={renderizarItemCategoria}
-        keyExtractor={(item) => item.id}
+        keyExtractor={(item) => item.id.toString()}
         horizontal
         showsHorizontalScrollIndicator={false}
-        // contentContainerStyle={}
       />
       <FontAwesome5
         name="angle-right"
         size={25}
         color="#C61919"
-        style={estilos.iconoCategoria}
-        onPress={() => {
-          console.log("HOla perro");
-        }}
+        style={styles.navigationIcon}
+        onPress={() => {}}
       />
     </View>
   );
 };
 
-const estilos = StyleSheet.create({
-  iconoCategoria: {
-    marginTop: 20,
-    marginRight: 10,
-    marginLeft: 10,
-  },
-  contenedorCategorias: {
-    paddingHorizontal: 10,
-    paddingVertical: 10,
-  },
-  listaCategorias: {
-    paddingVertical: 5,
+export default ListaCategorias;
+
+const styles = StyleSheet.create({
+  categoryContainer: {
     flexDirection: "row",
     justifyContent: "center",
+    paddingVertical: 5,
   },
-  categoria: {
+  navigationIcon: {
+    marginHorizontal: 10,
+    marginVertical: 33,
+  },
+  categoryButton: {
     alignItems: "center",
     justifyContent: "center",
     padding: 10,
     backgroundColor: "#FFF",
     borderRadius: 15,
-    width: 70,
-    height: 70,
-    marginHorizontal: 10,
+    width: 73,
+    height: 73,
+    margin: 10,
+    elevation: 3,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.2,
     shadowRadius: 2,
-    elevation: 3,
   },
-  textoCategoria: {
+  activeCategoryButton: {
+    backgroundColor: "#EEE",
+  },
+  categoryLabel: {
     marginTop: 8,
     color: "#888",
     fontSize: 8,
   },
-  categoriaSeleccionada: {
-    backgroundColor: "#EEE",
-  },
-  textoCategoriaSeleccionada: {
+  activeCategoryLabel: {
     color: "#C61919",
   },
 });

@@ -12,6 +12,7 @@ import {
   Image,
   Button,
   TouchableOpacity,
+  FlatList,
 } from "react-native";
 
 import { StatusBar } from "expo-status-bar";
@@ -35,7 +36,6 @@ import { Categoria } from "@/models/Categoria";
 import ListaPymes from "@/components/pymes";
 import { Pyme } from "@/models/Pyme";
 import { Stack } from "expo-router";
-
 
 const { width: viewportWidth } = Dimensions.get("window");
 import colorsIkam from "@/assets/estilos";
@@ -66,11 +66,17 @@ const App = () => {
 
   const [subCategorias, setSubCategorias] = useState<SubCategoria[]>([]); // BD NO MODIFICAR
   const [subCategoriasF, setSubCategoriasF] = useState<SubCategoria[]>([]); // Filtro
-  const [subCategoriaSeleccionada, setSubCategoriaSeleccionada] = useState<string | null>(null); // Marcar subcategoria
-  const [subCategoriaBuscarPyme, setSubCategoriaBuscarPyme] = useState<string | null>(null); // Seleccionar pyme por subCtaegoria
+  const [subCategoriaSeleccionada, setSubCategoriaSeleccionada] = useState<
+    string | null
+  >(null); // Marcar subcategoria
+  const [subCategoriaBuscarPyme, setSubCategoriaBuscarPyme] = useState<
+    string | null
+  >(null); // Seleccionar pyme por subCtaegoria
 
   const [categoria, setCategoria] = useState<string>("");
-  const [categoriaSeleccionada, setCategoriaSeleccionada] = useState<string | null>(null);
+  const [categoriaSeleccionada, setCategoriaSeleccionada] = useState<
+    string | null
+  >(null);
   const [busquedaPyme, setBusquedaPyme] = useState<string>("");
 
   const [busquedaCategoria, setBusquedaCategoria] = useState<string>("");
@@ -114,7 +120,6 @@ const App = () => {
     return () => unsubscribe && unsubscribe();
   }, []);
 
-
   // Obtener las subcategorias
   useEffect(() => {
     const unsubscribe = suscribirseASubCategorias((subcategorias) => {
@@ -155,20 +160,20 @@ const App = () => {
   };
 
   // Colonia nula por cosa de ubicacion
-  useEffect(() => {    
-    setPymesCol(pymes);    
+  useEffect(() => {
+    setPymesCol(pymes);
   }, [pymes]);
 
-  useEffect(() => {    
-    if (colonia != "2" && colonia != "") {      
+  useEffect(() => {
+    if (colonia != "2" && colonia != "") {
       filtrarCategoriasPorColonia(colonia);
-    } 
+    }
 
-    if (colonia == "2") {      
+    if (colonia == "2") {
       setCategorias(categoriasF);
       setPymesCol(pymes);
       return;
-    }    
+    }
   }, [colonia]);
 
   // Filtro por nombre de pymes
@@ -205,7 +210,7 @@ const App = () => {
         setPymesQ(pymesCol);
       }
     }
-  }, [categoriaSeleccionada]);  
+  }, [categoriaSeleccionada]);
 
   useEffect(() => {
     const pymesCat = pymesCol.filter((pyme) =>
@@ -217,28 +222,28 @@ const App = () => {
       catName.categoria.toLowerCase().includes(categoria.toLowerCase())
     );
     setSubCategoriasF(subCat);
-  }, [categoria]);  
-  
+  }, [categoria]);
+
   // Filtro por sub categoria
   useEffect(() => {
-    if (subCategoriaBuscarPyme==null) {
+    if (subCategoriaBuscarPyme == null) {
       return;
     }
-    //console.log(subCategoriaBuscarPyme);    
+    //console.log(subCategoriaBuscarPyme);
     const pymesCat = pymesCol.filter((pyme) =>
-      pyme.nombreSubcate?.toLowerCase().includes(subCategoriaBuscarPyme.toLowerCase())
+      pyme.nombreSubcate
+        ?.toLowerCase()
+        .includes(subCategoriaBuscarPyme.toLowerCase())
     );
     setPymesQ(pymesCat);
-  }, [subCategoriaBuscarPyme]);  
-
-  
+  }, [subCategoriaBuscarPyme]);
 
   // Manejar el evento de retroceso en Android
   useFocusEffect(
     useCallback(() => {
       const onBackPress = () => {
-        if (categoriaSeleccionada ) {
-          setCategoriaSeleccionada(null);          
+        if (categoriaSeleccionada) {
+          setCategoriaSeleccionada(null);
           setBusquedaCategoria("");
           setSubCategoriaSeleccionada(null);
           setSubCategoriaBuscarPyme(null);
@@ -274,9 +279,7 @@ const App = () => {
                 setCategoriaSeleccionada(null);
                 setSubCategoriaSeleccionada(null);
                 setSubCategoriaBuscarPyme(null);
-            }
-                
-              }
+              }}
             >
               <Icon
                 style={{ marginLeft: 15 }}
@@ -295,7 +298,7 @@ const App = () => {
       />
 
       {categoriaSeleccionada === null ? (
-        <View style={estilos.contenedorCategorias}>          
+        <View style={estilos.contenedorCategorias}>
           <BarraBusquedaCategoria
             busquedaCategoria={busquedaCategoria}
             setbusquedaCategoria={setBusquedaCategoria}
@@ -311,25 +314,25 @@ const App = () => {
           />
         </View>
       ) : (
-        <View style={estilos.contenedorPymes}>         
+        <View style={estilos.contenedorPymes}>
           <BarraBusqueda
             busquedaPyme={busquedaPyme}
             setbusquedaPyme={setBusquedaPyme}
             setModalVisible={setModalVisible}
-          />        
-            { subCategoriasF.length > 1  && (
-              <SubCategorias 
-                subCategorias={subCategoriasF}
-                subCategoriaSeleccionada={subCategoriaSeleccionada}
-                setSubCategoriaSeleccionada={setSubCategoriaSeleccionada}
-                setSubCategoriaBuscarPyme={setSubCategoriaBuscarPyme}
-              />          
-            )}
+          />
+          {subCategoriasF.length > 1 && (
+            <SubCategorias
+              subCategorias={subCategoriasF}
+              subCategoriaSeleccionada={subCategoriaSeleccionada}
+              setSubCategoriaSeleccionada={setSubCategoriaSeleccionada}
+              setSubCategoriaBuscarPyme={setSubCategoriaBuscarPyme}
+            />
+          )}
           {pymesQ.length > 0 ? (
-            <ListaPymes
-              setPymeSeleccionada={setPymeSeleccionada}
-              pymesQ={pymesQ}
-              setVistaDetalles={setVistaDetalles}
+            <FlatList
+              data={pymesQ}
+              renderItem={({ item }) => <ListaPymes pyme={item} />}
+              keyExtractor={(item) => item.id}
             />
           ) : (
             <View style={estilos.contenedorMensaje}>
@@ -379,7 +382,7 @@ const estilos = StyleSheet.create({
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    marginHorizontal: 20
+    marginHorizontal: 20,
   },
   mensajeNoPymes: {
     color: "#888",

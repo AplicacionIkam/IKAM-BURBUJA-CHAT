@@ -12,6 +12,7 @@ import {
 } from "react-native";
 import { Entypo, Feather, Ionicons } from "@expo/vector-icons";
 import colorsIkam from "@/assets/estilos";
+
 type Mensaje = {
   user: string;
   mensaje: string;
@@ -33,13 +34,17 @@ const chatNuevo = () => {
     { user: "2", mensaje: "hola, buenas noches", time: "10:32 pm" },
     { user: "2", mensaje: "En que le puedo servir", time: "10:32 pm" },
     { user: "1", mensaje: "Quisiera saber los costos", time: "10:33 pm" },
-    { user: "2", mensaje: "Le envio nuestra lista de precios", time: "10:32 pm" },
+    {
+      user: "2",
+      mensaje: "Le envio nuestra lista de precios",
+      time: "10:32 pm",
+    },
     { user: "1", mensaje: "Gracias", time: "10:33 pm" },
   ];
 
   useEffect(() => {
     setMensajes(men);
-  }, []);  
+  }, []);
 
   const verDetalle = (item: any) => {
     // router.push({ pathname: "/list/[id]", params: item });
@@ -65,7 +70,7 @@ const chatNuevo = () => {
           headerTintColor: "white",
           headerBackTitle: "Volver",
           headerShown: true,
-          headerTitleAlign: "center",          
+          headerTitleAlign: "center",
         }}
       />
       {/* <Stack.Screen

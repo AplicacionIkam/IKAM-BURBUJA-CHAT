@@ -118,7 +118,7 @@ const estilos = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
-    elevation: 2,
+    elevation: 5,
     width: (viewportWidth * 0.88 - 20) / 2, // Ajusta el ancho para dos columnas
     marginVertical: 10,
     marginHorizontal: 10, // Espacio horizontal entre columnas
